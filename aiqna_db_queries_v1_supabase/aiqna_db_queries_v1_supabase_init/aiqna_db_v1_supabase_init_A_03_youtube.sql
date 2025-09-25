@@ -33,7 +33,13 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     -- 시스템 타임스탬프
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_processed_at TIMESTAMP WITH TIME ZONE
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    -- processing 상태 검증
+    CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+
+    -- 시간 로직 검증
+    CHECK (processing_started IS NULL OR processing_completed IS NULL OR processing_completed >= processing_started)
 );
 
 CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_logs_processing_status ON youtube_video_processing_logs(processing_status);
@@ -163,6 +169,9 @@ CREATE INDEX IF NOT EXISTS idx_youtube_videos_category_id ON youtube_videos(cate
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_live_broadcast_content ON youtube_videos(live_broadcast_content);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_privacy_status ON youtube_videos(privacy_status);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_processing_status ON youtube_videos(is_info_fetched, is_transcript_fetched, is_pinecone_processed);
+-- 복합 인덱스 추가 권장
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_status_combo 
+ON youtube_videos(is_info_fetched, is_transcript_fetched, is_pinecone_processed, created_at);
 
 
 
@@ -180,22 +189,22 @@ CREATE INDEX IF NOT EXISTS idx_youtube_videos_processing_status ON youtube_video
 CREATE OR REPLACE FUNCTION iso8601_duration_to_seconds(p text)
 RETURNS int LANGUAGE plpgsql AS $$
 DECLARE
-  v_hours int := 0; 
-  v_minutes int := 0; 
-  v_seconds int := 0;
-  v_match_h text[];
-  v_match_m text[];
-  v_match_s text[];
+    v_hours int := 0; 
+    v_minutes int := 0; 
+    v_seconds int := 0;
+    v_match_h text[];
+    v_match_m text[];
+    v_match_s text[];
 BEGIN
-  IF p IS NULL OR p = '' OR p !~ '^PT' THEN RETURN NULL; END IF;
+    IF p IS NULL OR p = '' OR p !~ '^PT' THEN RETURN NULL; END IF;
 
-  v_match_h := regexp_match(p, '([0-9]+)H');
-  v_match_m := regexp_match(p, '([0-9]+)M');
-  v_match_s := regexp_match(p, '([0-9]+)S');
+    v_match_h := regexp_match(p, '([0-9]+)H');
+    v_match_m := regexp_match(p, '([0-9]+)M');
+    v_match_s := regexp_match(p, '([0-9]+)S');
 
-  v_hours := COALESCE(v_match_h[1], '0')::int;
-  v_minutes := COALESCE(v_match_m[1], '0')::int;
-  v_seconds := COALESCE(v_match_s[1], '0')::int;
+    v_hours := COALESCE(v_match_h[1], '0')::int;
+    v_minutes := COALESCE(v_match_m[1], '0')::int;
+    v_seconds := COALESCE(v_match_s[1], '0')::int;
 
   RETURN v_hours * 3600 + v_minutes * 60 + v_seconds;
 END;
@@ -213,6 +222,7 @@ CREATE OR REPLACE FUNCTION upsert_youtube_video_api_data(
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = pg_catalog, public  -- ✅ 추가
 AS $$
 DECLARE
     v_video_uuid uuid;
@@ -390,7 +400,10 @@ BEGIN
         CASE WHEN lower(NULLIF(v_content_details->>'caption','')) = 'true' THEN TRUE
             WHEN lower(NULLIF(v_content_details->>'caption','')) = 'false' THEN FALSE
             ELSE NULL END,
-        (v_content_details->>'licensedContent')::boolean,
+        -- 더 안전한 방식
+        CASE WHEN lower(NULLIF(v_content_details->>'licensedContent','')) = 'true' THEN TRUE
+            WHEN lower(NULLIF(v_content_details->>'licensedContent','')) = 'false' THEN FALSE
+            ELSE NULL END,
         v_content_details->>'projection',
         
         -- 상태 정보 (status)
@@ -577,6 +590,24 @@ $$;
 
 
 
+-- pinecone_processing_logs 상태 변경 시 youtube_videos.is_pinecone_processed 업데이트
+CREATE OR REPLACE FUNCTION update_pinecone_status()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.processing_status = 'completed' THEN
+        UPDATE youtube_videos 
+        SET is_pinecone_processed = TRUE, updated_at = NOW()
+        WHERE video_id = NEW.video_id;
+    ELSIF NEW.processing_status = 'failed' THEN
+        UPDATE youtube_videos 
+        SET is_pinecone_processed = FALSE, updated_at = NOW()
+        WHERE video_id = NEW.video_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
 
 
 
@@ -614,10 +645,9 @@ CREATE TABLE IF NOT EXISTS youtube_transcripts (
 CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_video_id ON youtube_transcripts(video_id);
 CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_language ON youtube_transcripts(language);
 
--- 전문 검색을 위한 GIN 인덱스 (선택사항)
--- CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_full_text_gin 
--- ON youtube_transcripts USING gin(to_tsvector('korean', full_text));
-
+-- 트랜스크립트 검색 성능 향상
+CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_full_text_gin 
+ON youtube_transcripts USING gin(to_tsvector('simple', full_text));
 
 /*
  ***********************************************************************************************
@@ -653,22 +683,7 @@ CREATE TRIGGER trigger_update_transcript_status
     AFTER INSERT OR DELETE ON youtube_transcripts
     FOR EACH ROW EXECUTE FUNCTION update_transcript_status();
 
--- pinecone_processing_logs 상태 변경 시 youtube_videos.is_pinecone_processed 업데이트
-CREATE OR REPLACE FUNCTION update_pinecone_status()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.processing_status = 'completed' THEN
-        UPDATE youtube_videos 
-        SET is_pinecone_processed = TRUE, updated_at = NOW()
-        WHERE video_id = NEW.video_id;
-    ELSIF NEW.processing_status = 'failed' THEN
-        UPDATE youtube_videos 
-        SET is_pinecone_processed = FALSE, updated_at = NOW()
-        WHERE video_id = NEW.video_id;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+
 
 
 
@@ -710,6 +725,7 @@ CREATE TABLE IF NOT EXISTS pinecone_processing_logs (
 CREATE INDEX IF NOT EXISTS idx_pinecone_logs_video_id ON pinecone_processing_logs(video_id);
 CREATE INDEX IF NOT EXISTS idx_pinecone_logs_status ON pinecone_processing_logs(processing_status);
 CREATE INDEX IF NOT EXISTS idx_pinecone_logs_created_at ON pinecone_processing_logs(created_at);
+
 
 -- 트리거 생성
 DROP TRIGGER IF EXISTS trigger_update_pinecone_status ON pinecone_processing_logs;
