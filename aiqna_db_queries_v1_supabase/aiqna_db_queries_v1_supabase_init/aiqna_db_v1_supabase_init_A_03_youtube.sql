@@ -150,11 +150,6 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     age_restricted BOOLEAN DEFAULT FALSE,
     family_safe BOOLEAN DEFAULT TRUE,
     
-    -- 처리 상태 플래그들
-    is_info_fetched BOOLEAN DEFAULT FALSE,
-    is_transcript_fetched BOOLEAN DEFAULT FALSE,
-    is_pinecone_processed BOOLEAN DEFAULT FALSE,
-    
     -- 시스템 타임스탬프
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -168,10 +163,6 @@ CREATE INDEX IF NOT EXISTS idx_youtube_videos_published_date ON youtube_videos(p
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_category_id ON youtube_videos(category_id);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_live_broadcast_content ON youtube_videos(live_broadcast_content);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_privacy_status ON youtube_videos(privacy_status);
-CREATE INDEX IF NOT EXISTS idx_youtube_videos_processing_status ON youtube_videos(is_info_fetched, is_transcript_fetched, is_pinecone_processed);
--- 복합 인덱스 추가 권장
-CREATE INDEX IF NOT EXISTS idx_youtube_videos_status_combo 
-ON youtube_videos(is_info_fetched, is_transcript_fetched, is_pinecone_processed, created_at);
 
 
 
@@ -341,11 +332,6 @@ BEGIN
         age_restricted,
         family_safe,
         
-        -- 처리 상태 플래그들
-        is_info_fetched,
-        is_transcript_fetched,
-        is_pinecone_processed,
-        
         -- 시스템 타임스탬프 (created_at은 자동생성)
         updated_at,
         last_processed_at
@@ -461,11 +447,6 @@ BEGIN
         FALSE, -- age_restricted는 별도 로직 필요
         TRUE,  -- family_safe 기본값
         
-        -- 처리 상태 플래그들
-        TRUE,  -- is_info_fetched
-        FALSE, -- is_transcript_fetched (기본값 유지)
-        FALSE, -- is_pinecone_processed (기본값 유지)
-        
         -- 시스템 타임스탬프
         NOW(),
         NOW()
@@ -553,10 +534,7 @@ BEGIN
         is_live = EXCLUDED.is_live,
         is_upcoming = EXCLUDED.is_upcoming,
         is_private = EXCLUDED.is_private,
-        
-        -- 처리 상태 플래그들
-        is_info_fetched = TRUE,
-        
+
         -- 시스템 타임스탬프
         updated_at = NOW(),
         last_processed_at = NOW()
@@ -613,10 +591,10 @@ $$ LANGUAGE plpgsql;
 
 /*
  ***********************************************************************************************
- * TABLE: youtube_transcripts
+ * TABLE: youtube_video_transcripts
  ***********************************************************************************************
  */
-CREATE TABLE IF NOT EXISTS youtube_transcripts (
+CREATE TABLE IF NOT EXISTS youtube_video_transcripts (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     video_id VARCHAR(20) NOT NULL REFERENCES youtube_videos(video_id) ON DELETE CASCADE,
     
@@ -642,12 +620,12 @@ CREATE TABLE IF NOT EXISTS youtube_transcripts (
 );
 
 -- 인덱스
-CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_video_id ON youtube_transcripts(video_id);
-CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_language ON youtube_transcripts(language);
+CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_video_id ON youtube_video_transcripts(video_id);
+CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_language ON youtube_video_transcripts(language);
 
 -- 트랜스크립트 검색 성능 향상
 CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_full_text_gin 
-ON youtube_transcripts USING gin(to_tsvector('simple', full_text));
+ON youtube_video_transcripts USING gin(to_tsvector('simple', full_text));
 
 /*
  ***********************************************************************************************
@@ -655,7 +633,7 @@ ON youtube_transcripts USING gin(to_tsvector('simple', full_text));
  ***********************************************************************************************
  */
 -- youtube_transcripts 삽입/삭제 시 youtube_videos.is_transcript_fetched 업데이트
-CREATE OR REPLACE FUNCTION update_transcript_status()
+CREATE OR REPLACE FUNCTION update_youtube_video_transcript_status()
 RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
@@ -667,7 +645,7 @@ BEGIN
         -- 해당 video_id의 다른 언어 트랜스크립트가 있는지 확인
         UPDATE youtube_videos 
         SET is_transcript_fetched = EXISTS (
-            SELECT 1 FROM youtube_transcripts 
+            SELECT 1 FROM youtube_video_transcripts 
             WHERE video_id = OLD.video_id
         ), updated_at = NOW()
         WHERE video_id = OLD.video_id;
@@ -678,10 +656,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 트리거 생성
-DROP TRIGGER IF EXISTS trigger_update_transcript_status ON youtube_transcripts;
-CREATE TRIGGER trigger_update_transcript_status
-    AFTER INSERT OR DELETE ON youtube_transcripts
-    FOR EACH ROW EXECUTE FUNCTION update_transcript_status();
+DROP TRIGGER IF EXISTS trigger_update_youtube_video_transcript_status ON youtube_video_transcripts;
+CREATE TRIGGER trigger_update_youtube_video_transcript_status
+    AFTER INSERT OR DELETE ON youtube_video_transcripts
+    FOR EACH ROW EXECUTE FUNCTION update_youtube_video_transcript_status();
 
 
 
@@ -725,7 +703,6 @@ CREATE TABLE IF NOT EXISTS pinecone_processing_logs (
 CREATE INDEX IF NOT EXISTS idx_pinecone_logs_video_id ON pinecone_processing_logs(video_id);
 CREATE INDEX IF NOT EXISTS idx_pinecone_logs_status ON pinecone_processing_logs(processing_status);
 CREATE INDEX IF NOT EXISTS idx_pinecone_logs_created_at ON pinecone_processing_logs(created_at);
-
 
 -- 트리거 생성
 DROP TRIGGER IF EXISTS trigger_update_pinecone_status ON pinecone_processing_logs;

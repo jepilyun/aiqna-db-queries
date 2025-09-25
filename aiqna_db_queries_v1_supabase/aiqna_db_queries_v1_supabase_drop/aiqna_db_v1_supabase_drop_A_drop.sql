@@ -7,8 +7,8 @@
 
 DROP TABLE IF EXISTS public.pinecone_processing_logs;
 
-DROP FUNCTION IF EXISTS update_transcript_status();
-DROP TABLE IF EXISTS public.youtube_transcripts;
+DROP TABLE IF EXISTS public.youtube_video_transcripts;
+DROP FUNCTION IF EXISTS update_youtube_video_transcript_status();
 
 DROP FUNCTION IF EXISTS update_pinecone_status();
 DROP FUNCTION IF EXISTS upsert_youtube_video_api_data(jsonb);
