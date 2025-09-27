@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     -- 일시 정보
     processing_started TIMESTAMP WITH TIME ZONE,
     processing_completed TIMESTAMP WITH TIME ZONE,
+    retry_count INTEGER DEFAULT 0,
     
     -- 시스템 타임스탬프
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -632,18 +633,18 @@ ON youtube_video_transcripts USING gin(to_tsvector('simple', full_text));
  * 트리거 함수: 처리 상태 자동 업데이트 (선택사항)
  ***********************************************************************************************
  */
--- youtube_transcripts 삽입/삭제 시 youtube_videos.is_transcript_fetched 업데이트
+-- youtube_transcripts 삽입/삭제 시 youtube_video_processing_logs.is_transcript_fetched 업데이트
 CREATE OR REPLACE FUNCTION update_youtube_video_transcript_status()
 RETURNS TRIGGER AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        UPDATE youtube_videos 
+        UPDATE youtube_video_processing_logs 
         SET is_transcript_fetched = TRUE, updated_at = NOW()
         WHERE video_id = NEW.video_id;
         RETURN NEW;
     ELSIF TG_OP = 'DELETE' THEN
         -- 해당 video_id의 다른 언어 트랜스크립트가 있는지 확인
-        UPDATE youtube_videos 
+        UPDATE youtube_video_processing_logs 
         SET is_transcript_fetched = EXISTS (
             SELECT 1 FROM youtube_video_transcripts 
             WHERE video_id = OLD.video_id
