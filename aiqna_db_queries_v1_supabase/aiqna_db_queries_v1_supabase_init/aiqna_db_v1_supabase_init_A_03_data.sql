@@ -3,7 +3,7 @@
  * Database Name 'aiqna'
  *
  * Created 2025-09-24
- * Updated 2025-09-24
+ * Updated 2025-10-03
  */
 
 
@@ -36,6 +36,10 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     last_processed_at TIMESTAMP WITH TIME ZONE,
 
+    source VARCHAR(50), -- 'api', 'manual', 'batch', 'scheduled' 등
+    "priority" INTEGER DEFAULT 5, -- 1(highest) ~ 10(lowest)
+    assigned_worker VARCHAR(100), -- 처리 중인 워커 식별자
+
     -- processing 상태 검증
     CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
 
@@ -44,6 +48,149 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_logs_processing_status ON youtube_video_processing_logs(processing_status);
+
+
+
+
+/*
+ ***********************************************************************************************
+ * TABLE: instagram_post_processing_logs (Instagram Post Processing Logs)
+ ***********************************************************************************************
+ */
+CREATE TABLE IF NOT EXISTS instagram_post_processing_logs (
+    -- 기본 키
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    instagram_post_url VARCHAR(1023) NOT NULL UNIQUE,
+    
+    -- 메타데이터
+    processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
+    error_message TEXT,
+    
+    -- 불린 플래그들
+    is_data_fetched BOOLEAN DEFAULT FALSE,
+    is_pinecone_processed BOOLEAN DEFAULT FALSE,
+    
+    -- 일시 정보
+    processing_started TIMESTAMP WITH TIME ZONE,
+    processing_completed TIMESTAMP WITH TIME ZONE,
+    retry_count INTEGER DEFAULT 0,
+    
+    -- 시스템 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    source VARCHAR(50), -- 'api', 'manual', 'batch', 'scheduled' 등
+    "priority" INTEGER DEFAULT 5, -- 1(highest) ~ 10(lowest)
+    assigned_worker VARCHAR(100), -- 처리 중인 워커 식별자
+
+    -- processing 상태 검증
+    CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+
+    -- 시간 로직 검증
+    CHECK (processing_started IS NULL OR processing_completed IS NULL OR processing_completed >= processing_started)
+);
+
+CREATE INDEX IF NOT EXISTS idx_instagram_post_processing_logs_processing_status ON instagram_post_processing_logs(processing_status);
+
+
+
+
+
+/*
+ ***********************************************************************************************
+ * TABLE: blog_post_processing_logs (Blog Post Processing Logs)
+ ***********************************************************************************************
+ */
+CREATE TABLE IF NOT EXISTS blog_post_processing_logs (
+    -- 기본 키
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    blog_post_url VARCHAR(1023) NOT NULL UNIQUE,
+    
+    -- 메타데이터
+    processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
+    error_message TEXT,
+    
+    -- 불린 플래그들
+    is_data_fetched BOOLEAN DEFAULT FALSE,
+    is_pinecone_processed BOOLEAN DEFAULT FALSE,
+    
+    -- 일시 정보
+    processing_started TIMESTAMP WITH TIME ZONE,
+    processing_completed TIMESTAMP WITH TIME ZONE,
+    retry_count INTEGER DEFAULT 0,
+    
+    -- 시스템 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    source VARCHAR(50), -- 'api', 'manual', 'batch', 'scheduled' 등
+    "priority" INTEGER DEFAULT 5, -- 1(highest) ~ 10(lowest)
+    assigned_worker VARCHAR(100), -- 처리 중인 워커 식별자
+
+    -- processing 상태 검증
+    CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+
+    -- 시간 로직 검증
+    CHECK (processing_started IS NULL OR processing_completed IS NULL OR processing_completed >= processing_started)
+);
+
+CREATE INDEX IF NOT EXISTS idx_blog_post_processing_logs_processing_status ON blog_post_processing_logs(processing_status);
+
+
+
+
+/*
+ ***********************************************************************************************
+ * TABLE: text_processing_logs (Text Processing Logs)
+ ***********************************************************************************************
+ */
+CREATE TABLE IF NOT EXISTS text_processing_logs (
+    -- 기본 키
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    hash_key VARCHAR(36) NOT NULL UNIQUE,
+    
+    -- 메타데이터
+    processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
+    error_message TEXT,
+    
+    -- 불린 플래그들
+    is_pinecone_processed BOOLEAN DEFAULT FALSE,
+    
+    -- 일시 정보
+    processing_started TIMESTAMP WITH TIME ZONE,
+    processing_completed TIMESTAMP WITH TIME ZONE,
+    retry_count INTEGER DEFAULT 0,
+    
+    -- 시스템 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    source VARCHAR(50), -- 'api', 'manual', 'batch', 'scheduled' 등
+    "priority" INTEGER DEFAULT 5, -- 1(highest) ~ 10(lowest)
+    assigned_worker VARCHAR(100), -- 처리 중인 워커 식별자
+
+    -- processing 상태 검증
+    CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed')),
+
+    -- 시간 로직 검증
+    CHECK (processing_started IS NULL OR processing_completed IS NULL OR processing_completed >= processing_started)
+);
+
+CREATE INDEX IF NOT EXISTS idx_text_processing_logs_processing_status ON text_processing_logs(processing_status);
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
@@ -154,7 +301,12 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     -- 시스템 타임스탬프
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    last_processed_at TIMESTAMP WITH TIME ZONE
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    metadata_json JSONB, -- 추가 메타데이터를 유연하게 저장
+    is_active BOOLEAN DEFAULT TRUE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 -- 인덱스 생성
@@ -164,9 +316,21 @@ CREATE INDEX IF NOT EXISTS idx_youtube_videos_published_date ON youtube_videos(p
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_category_id ON youtube_videos(category_id);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_live_broadcast_content ON youtube_videos(live_broadcast_content);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_privacy_status ON youtube_videos(privacy_status);
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_is_active ON youtube_videos(is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_is_deleted ON youtube_videos(is_deleted) WHERE is_deleted = FALSE;
 
+-- youtube_videos 테이블의 배열 컬럼 인덱스
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_tags_gin 
+ON youtube_videos USING gin(tags);
 
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_topic_ids_gin 
+ON youtube_videos USING gin(topic_ids);
 
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_relevant_topic_ids_gin 
+ON youtube_videos USING gin(relevant_topic_ids);
+
+CREATE INDEX IF NOT EXISTS idx_youtube_videos_keywords_gin 
+ON youtube_videos USING gin(keywords);
 
 
 
@@ -569,25 +733,6 @@ $$;
 
 
 
--- pinecone_processing_logs 상태 변경 시 youtube_videos.is_pinecone_processed 업데이트
-CREATE OR REPLACE FUNCTION update_pinecone_status()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.processing_status = 'completed' THEN
-        UPDATE youtube_videos 
-        SET is_pinecone_processed = TRUE, updated_at = NOW()
-        WHERE video_id = NEW.video_id;
-    ELSIF NEW.processing_status = 'failed' THEN
-        UPDATE youtube_videos 
-        SET is_pinecone_processed = FALSE, updated_at = NOW()
-        WHERE video_id = NEW.video_id;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-
-
 
 
 /*
@@ -666,50 +811,186 @@ CREATE TRIGGER trigger_update_youtube_video_transcript_status
 
 
 
+/*
+ ***********************************************************************************************
+ * TABLE: instagram_posts (Instagram Posts)
+ ***********************************************************************************************
+ */
+CREATE TABLE IF NOT EXISTS instagram_posts (
+    -- 기본 키
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    instagram_post_url VARCHAR(1023) NOT NULL UNIQUE,
+    
+    -- 포스트 메타데이터
+    post_type VARCHAR(20), -- 'image', 'video', 'carousel', 'reel', 'story'
+    media_count INTEGER DEFAULT 1,
+    media_urls TEXT[], -- 여러 이미지/비디오 URL
+
+    -- 통계
+    like_count BIGINT DEFAULT 0,
+    comment_count BIGINT DEFAULT 0,
+    view_count BIGINT DEFAULT 0, -- 비디오인 경우
+
+    description VARCHAR(2047),
+    tags TEXT[],
+
+    user_id VARCHAR(50),
+    user_name VARCHAR(255),
+    user_profile_url TEXT,
+
+    published_date TIMESTAMP WITH TIME ZONE,
+
+    local_image_url VARCHAR(511), -- supabase storage url
+
+    -- 위치 정보
+    location_name VARCHAR(255),
+    location_id VARCHAR(100),
+    latitude NUMERIC(10,8),
+    longitude NUMERIC(11,8),
+
+    -- 시스템 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    metadata_json JSONB, -- 추가 메타데이터를 유연하게 저장
+    is_active BOOLEAN DEFAULT TRUE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_instagram_post_url ON instagram_posts(instagram_post_url);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_published_date ON instagram_posts(published_date);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_user_id ON instagram_posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_user_name ON instagram_posts(user_name);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_post_type ON instagram_posts(post_type);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_location ON instagram_posts(location_name);
+
+-- instagram_posts 테이블의 배열 컬럼 인덱스
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_tags_gin 
+ON instagram_posts USING gin(tags);
+
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_media_urls_gin 
+ON instagram_posts USING gin(media_urls);
+
+
+
+
+
+
 
 
 /*
  ***********************************************************************************************
- * TABLE: pinecone_processing_logs
+ * TABLE: blog_posts (Blog Posts)
  ***********************************************************************************************
  */
-CREATE TABLE IF NOT EXISTS pinecone_processing_logs (
+CREATE TABLE IF NOT EXISTS blog_posts (
+    -- 기본 키
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    video_id VARCHAR(20) NOT NULL REFERENCES youtube_videos(video_id) ON DELETE CASCADE,
+    blog_post_url VARCHAR(1023) NOT NULL UNIQUE,
+    featured_image_url TEXT,
     
-    -- Pinecone 정보
-    index_name VARCHAR(100) NOT NULL,
-    chunk_count INTEGER DEFAULT 0,
-    
-    -- 처리 정보
-    embedding_model VARCHAR(100), -- "text-embedding-ada-002" 등
-    processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
-    error_message TEXT,
-    
-    -- 시간 정보
-    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    completed_at TIMESTAMP WITH TIME ZONE,
-    processing_duration_seconds INTEGER,
-    
-    -- 메타 정보
+    title VARCHAR(1023),
+    content TEXT,
+    tags TEXT[],
+
+    platform VARCHAR(100), -- naver, tistory, medium, twitter, facebook, newsweek, etc.
+    platform_url VARCHAR(1023),
+
+    published_date TIMESTAMP WITH TIME ZONE,
+
+    -- 시스템 타임스탬프
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
-    -- 제약조건 추가
-    CHECK (chunk_count >= 0),
-    CHECK (processing_duration_seconds IS NULL OR processing_duration_seconds >= 0),
-    CHECK (processing_status IN ('pending', 'processing', 'completed', 'failed'))
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    metadata_json JSONB, -- 추가 메타데이터를 유연하게 저장
+    is_active BOOLEAN DEFAULT TRUE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
--- 인덱스
-CREATE INDEX IF NOT EXISTS idx_pinecone_logs_video_id ON pinecone_processing_logs(video_id);
-CREATE INDEX IF NOT EXISTS idx_pinecone_logs_status ON pinecone_processing_logs(processing_status);
-CREATE INDEX IF NOT EXISTS idx_pinecone_logs_created_at ON pinecone_processing_logs(created_at);
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_blog_posts_blog_post_url ON blog_posts(blog_post_url);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_published_date ON blog_posts(published_date);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_platform ON blog_posts(platform);
 
--- 트리거 생성
-DROP TRIGGER IF EXISTS trigger_update_pinecone_status ON pinecone_processing_logs;
-CREATE TRIGGER trigger_update_pinecone_status
-    AFTER UPDATE ON pinecone_processing_logs
-    FOR EACH ROW 
-    WHEN (OLD.processing_status IS DISTINCT FROM NEW.processing_status)
-    EXECUTE FUNCTION update_pinecone_status();
+CREATE INDEX IF NOT EXISTS idx_blog_posts_tags_gin ON blog_posts USING gin(tags);
+
+
+
+
+
+/*
+ ***********************************************************************************************
+ * TABLE: texts (Texts)
+ ***********************************************************************************************
+ */
+CREATE TABLE IF NOT EXISTS texts (
+    -- 기본 키
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    hash_key VARCHAR(36) NOT NULL UNIQUE,
+    
+    title VARCHAR(1023), -- 선택적 제목
+    content TEXT,
+
+    -- 시스템 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    last_processed_at TIMESTAMP WITH TIME ZONE,
+
+    metadata_json JSONB, -- 추가 메타데이터를 유연하게 저장
+    is_active BOOLEAN DEFAULT TRUE,
+    is_deleted BOOLEAN DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_texts_hash_key ON texts(hash_key);
+
+
+
+
+
+
+
+
+/*
+ ***********************************************************************************************
+ * TABLE: pinecone_vectors (Texts)
+ ***********************************************************************************************
+ */
+CREATE TABLE IF NOT EXISTS pinecone_vectors (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    
+    -- 소스 식별
+    source_type VARCHAR(50) NOT NULL, -- 'youtube_video', 'instagram_post', 'blog_post', 'text'
+    source_id VARCHAR(100) NOT NULL, -- video_id, url, hash_key 등
+    
+    -- Pinecone 정보
+    vector_id VARCHAR(255) NOT NULL UNIQUE,
+    namespace VARCHAR(255),
+    index_name VARCHAR(255) NOT NULL,
+    
+    -- 메타데이터
+    chunk_index INTEGER, -- 여러 청크로 나눈 경우
+    total_chunks INTEGER,
+    embedding_model VARCHAR(100), -- 'text-embedding-3-small' 등
+    
+    -- 상태
+    status VARCHAR(20) DEFAULT 'active', -- 'active', 'deleted', 'outdated'
+    
+    -- 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    UNIQUE(source_type, source_id, chunk_index)
+);
+
+CREATE INDEX idx_pinecone_vectors_source ON pinecone_vectors(source_type, source_id);
+CREATE INDEX idx_pinecone_vectors_status ON pinecone_vectors(status);
+
 

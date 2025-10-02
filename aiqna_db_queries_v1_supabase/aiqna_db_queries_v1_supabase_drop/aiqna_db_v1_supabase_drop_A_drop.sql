@@ -5,7 +5,11 @@
  * Created 2025-09-05
  */
 
-DROP TABLE IF EXISTS public.pinecone_processing_logs;
+DROP TABLE IF EXISTS public.pinecone_vectors;
+
+DROP TABLE IF EXISTS public.texts;
+DROP TABLE IF EXISTS public.blog_posts;
+DROP TABLE IF EXISTS public.instagram_posts;
 
 DROP TABLE IF EXISTS public.youtube_video_transcripts;
 DROP FUNCTION IF EXISTS update_youtube_video_transcript_status();
@@ -14,6 +18,10 @@ DROP FUNCTION IF EXISTS update_pinecone_status();
 DROP FUNCTION IF EXISTS upsert_youtube_video_api_data(jsonb);
 DROP FUNCTION IF EXISTS iso8601_duration_to_seconds(text);
 DROP TABLE IF EXISTS public.youtube_videos;
+
+DROP TABLE IF EXISTS public.text_processing_logs;
+DROP TABLE IF EXISTS public.blog_post_processing_logs;
+DROP TABLE IF EXISTS public.instagram_post_processing_logs;
 DROP TABLE IF EXISTS public.youtube_video_processing_logs;
 
 
