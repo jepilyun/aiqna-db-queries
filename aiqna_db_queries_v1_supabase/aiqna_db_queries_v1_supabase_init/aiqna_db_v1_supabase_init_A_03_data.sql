@@ -20,12 +20,13 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     -- 메타데이터
     processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
     error_message TEXT,
+    index_name VARCHAR(255),
     
     -- 불린 플래그들
     is_api_data_fetched BOOLEAN DEFAULT FALSE,
     is_transcript_fetched BOOLEAN DEFAULT FALSE,
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
-    
+
     -- 일시 정보
     processing_started TIMESTAMP WITH TIME ZONE,
     processing_completed TIMESTAMP WITH TIME ZONE,
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS instagram_post_processing_logs (
     -- 메타데이터
     processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
     error_message TEXT,
+    index_name VARCHAR(255),
     
     -- 불린 플래그들
     is_data_fetched BOOLEAN DEFAULT FALSE,
@@ -110,7 +112,8 @@ CREATE TABLE IF NOT EXISTS blog_post_processing_logs (
     -- 메타데이터
     processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
     error_message TEXT,
-    
+    index_name VARCHAR(255),
+
     -- 불린 플래그들
     is_data_fetched BOOLEAN DEFAULT FALSE,
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
@@ -154,7 +157,8 @@ CREATE TABLE IF NOT EXISTS text_processing_logs (
     -- 메타데이터
     processing_status VARCHAR(20) DEFAULT 'pending', -- pending, processing, completed, failed
     error_message TEXT,
-    
+    index_name VARCHAR(255),
+
     -- 불린 플래그들
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
     
