@@ -832,13 +832,13 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     post_type VARCHAR(20), -- 'image', 'video', 'carousel', 'reel', 'story'
     media_count INTEGER DEFAULT 1,
     media_urls TEXT[], -- 여러 이미지/비디오 URL
-    ogTitle VARCHAR(1023),
-    ogDescription VARCHAR(1023),
-    ogImage VARCHAR(511),
-    ogUrl VARCHAR(1023),
-    ogIosUrl VARCHAR(1023),
-    ogAndroidPackage VARCHAR(1023),
-    ogAndroidUrl VARCHAR(1023),
+    og_title VARCHAR(1023),
+    og_description VARCHAR(1023),
+    og_image VARCHAR(511),
+    og_url VARCHAR(1023),
+    og_ios_url VARCHAR(1023),
+    og_android_package VARCHAR(1023),
+    og_android_url VARCHAR(1023),
     content VARCHAR(2047), 
 
     -- 통계
@@ -881,7 +881,7 @@ CREATE INDEX IF NOT EXISTS idx_instagram_posts_user_id ON instagram_posts(user_i
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_user_name ON instagram_posts(user_name);
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_post_type ON instagram_posts(post_type);
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_location ON instagram_posts(location_name);
-CREATE INDEX IF NOT EXISTS idx_instagram_posts_ogTitle ON instagram_posts(ogTitle);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_og_title ON instagram_posts(og_title);
 
 -- instagram_posts 테이블의 배열 컬럼 인덱스
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_tags_gin 
