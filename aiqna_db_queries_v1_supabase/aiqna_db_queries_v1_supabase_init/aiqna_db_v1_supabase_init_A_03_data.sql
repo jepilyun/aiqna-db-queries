@@ -834,7 +834,7 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     media_urls TEXT[], -- 여러 이미지/비디오 URL
     og_title VARCHAR(1023),
     og_description VARCHAR(1023),
-    og_image VARCHAR(511),
+    og_image VARCHAR(2048),
     og_url VARCHAR(1023),
     og_ios_url VARCHAR(1023),
     og_android_package VARCHAR(1023),
