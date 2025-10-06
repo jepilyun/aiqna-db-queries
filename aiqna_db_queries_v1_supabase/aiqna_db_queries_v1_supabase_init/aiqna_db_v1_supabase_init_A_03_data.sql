@@ -53,6 +53,9 @@ CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_logs_processing_status O
 
 
 
+
+
+
 /*
  ***********************************************************************************************
  * TABLE: instagram_post_processing_logs (Instagram Post Processing Logs)
@@ -829,6 +832,14 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     post_type VARCHAR(20), -- 'image', 'video', 'carousel', 'reel', 'story'
     media_count INTEGER DEFAULT 1,
     media_urls TEXT[], -- 여러 이미지/비디오 URL
+    ogTitle VARCHAR(1023),
+    ogDescription VARCHAR(1023),
+    ogImage VARCHAR(511),
+    ogUrl VARCHAR(1023),
+    ogIosUrl VARCHAR(1023),
+    ogAndroidPackage VARCHAR(1023),
+    ogAndroidUrl VARCHAR(1023),
+    content VARCHAR(2047), 
 
     -- 통계
     like_count BIGINT DEFAULT 0,
@@ -870,6 +881,7 @@ CREATE INDEX IF NOT EXISTS idx_instagram_posts_user_id ON instagram_posts(user_i
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_user_name ON instagram_posts(user_name);
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_post_type ON instagram_posts(post_type);
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_location ON instagram_posts(location_name);
+CREATE INDEX IF NOT EXISTS idx_instagram_posts_ogTitle ON instagram_posts(ogTitle);
 
 -- instagram_posts 테이블의 배열 컬럼 인덱스
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_tags_gin 
