@@ -839,7 +839,6 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     og_ios_url VARCHAR(1023),
     og_android_package VARCHAR(1023),
     og_android_url VARCHAR(1023),
-    content VARCHAR(2047), 
 
     -- 통계
     like_count BIGINT DEFAULT 0,
@@ -906,7 +905,6 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     -- 기본 키
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     blog_post_url VARCHAR(1023) NOT NULL UNIQUE,
-    featured_image_url TEXT,
     
     title VARCHAR(1023),
     content TEXT,
