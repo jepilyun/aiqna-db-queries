@@ -911,6 +911,14 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     title VARCHAR(1023),
     content TEXT,
     tags TEXT[],
+    
+    -- Open Graph 메타데이터
+    og_title VARCHAR(1023),
+    og_description VARCHAR(1023),
+    og_image VARCHAR(2048),
+    og_url VARCHAR(1023),
+    
+    local_image_url VARCHAR(511), -- supabase storage url
 
     platform VARCHAR(100), -- naver, tistory, medium, twitter, facebook, newsweek, etc.
     platform_url VARCHAR(1023),
@@ -932,9 +940,9 @@ CREATE TABLE IF NOT EXISTS blog_posts (
 CREATE INDEX IF NOT EXISTS idx_blog_posts_blog_post_url ON blog_posts(blog_post_url);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_published_date ON blog_posts(published_date);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_platform ON blog_posts(platform);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_og_title ON blog_posts(og_title);
 
 CREATE INDEX IF NOT EXISTS idx_blog_posts_tags_gin ON blog_posts USING gin(tags);
-
 
 
 
