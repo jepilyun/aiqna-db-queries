@@ -50,6 +50,16 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
 
 CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_logs_processing_status ON youtube_video_processing_logs(processing_status);
 
+alter table public.youtube_video_processing_logs enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "youtube_video_processing_logs are visible to everyone" on youtube_video_processing_logs for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert youtube_video_processing_logs" on youtube_video_processing_logs for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update youtube_video_processing_logs" on youtube_video_processing_logs for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete youtube_video_processing_logs" on youtube_video_processing_logs for delete to authenticated using (TRUE);
+
 
 
 
@@ -98,6 +108,16 @@ CREATE TABLE IF NOT EXISTS instagram_post_processing_logs (
 
 CREATE INDEX IF NOT EXISTS idx_instagram_post_processing_logs_processing_status ON instagram_post_processing_logs(processing_status);
 
+alter table public.instagram_post_processing_logs enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "instagram_post_processing_logs are visible to everyone" on instagram_post_processing_logs for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert instagram_post_processing_logs" on instagram_post_processing_logs for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update instagram_post_processing_logs" on instagram_post_processing_logs for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete instagram_post_processing_logs" on instagram_post_processing_logs for delete to authenticated using (TRUE);
+
 
 
 
@@ -144,6 +164,18 @@ CREATE TABLE IF NOT EXISTS blog_post_processing_logs (
 
 CREATE INDEX IF NOT EXISTS idx_blog_post_processing_logs_processing_status ON blog_post_processing_logs(processing_status);
 
+alter table public.blog_post_processing_logs enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "blog_post_processing_logs are visible to everyone" on blog_post_processing_logs for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert blog_post_processing_logs" on blog_post_processing_logs for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update blog_post_processing_logs" on blog_post_processing_logs for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete blog_post_processing_logs" on blog_post_processing_logs for delete to authenticated using (TRUE);
+
+
+
 
 
 
@@ -187,6 +219,18 @@ CREATE TABLE IF NOT EXISTS text_processing_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_text_processing_logs_processing_status ON text_processing_logs(processing_status);
+
+alter table public.text_processing_logs enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "text_processing_logs are visible to everyone" on text_processing_logs for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert text_processing_logs" on text_processing_logs for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update text_processing_logs" on text_processing_logs for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete text_processing_logs" on text_processing_logs for delete to authenticated using (TRUE);
+
+
 
 
 
@@ -338,6 +382,18 @@ ON youtube_videos USING gin(relevant_topic_ids);
 
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_keywords_gin 
 ON youtube_videos USING gin(keywords);
+
+alter table public.youtube_videos enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "youtube_videos are visible to everyone" on youtube_videos for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert youtube_videos" on youtube_videos for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update youtube_videos" on youtube_videos for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete youtube_videos" on youtube_videos for delete to authenticated using (TRUE);
+
+
 
 
 
@@ -780,6 +836,20 @@ CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_language ON youtube_video_tra
 CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_full_text_gin 
 ON youtube_video_transcripts USING gin(to_tsvector('simple', full_text));
 
+alter table public.youtube_video_transcripts enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "youtube_video_transcripts are visible to everyone" on youtube_video_transcripts for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert youtube_video_transcripts" on youtube_video_transcripts for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update youtube_video_transcripts" on youtube_video_transcripts for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete youtube_video_transcripts" on youtube_video_transcripts for delete to authenticated using (TRUE);
+
+
+
+
+
 /*
  ***********************************************************************************************
  * 트리거 함수: 처리 상태 자동 업데이트 (선택사항)
@@ -889,6 +959,17 @@ ON instagram_posts USING gin(tags);
 CREATE INDEX IF NOT EXISTS idx_instagram_posts_media_urls_gin 
 ON instagram_posts USING gin(media_urls);
 
+alter table public.instagram_posts enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "instagram_posts are visible to everyone" on instagram_posts for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert instagram_posts" on instagram_posts for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update instagram_posts" on instagram_posts for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete instagram_posts" on instagram_posts for delete to authenticated using (TRUE);
+
+
 
 
 
@@ -942,6 +1023,15 @@ CREATE INDEX IF NOT EXISTS idx_blog_posts_og_title ON blog_posts(og_title);
 
 CREATE INDEX IF NOT EXISTS idx_blog_posts_tags_gin ON blog_posts USING gin(tags);
 
+alter table public.blog_posts enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "blog_posts are visible to everyone" on blog_posts for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert blog_posts" on blog_posts for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update blog_posts" on blog_posts for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete blog_posts" on blog_posts for delete to authenticated using (TRUE);
 
 
 
@@ -972,7 +1062,15 @@ CREATE TABLE IF NOT EXISTS texts (
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_texts_hash_key ON texts(hash_key);
 
-
+alter table public.texts enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "texts are visible to everyone" on texts for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert texts" on texts for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update texts" on texts for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete texts" on texts for delete to authenticated using (TRUE);
 
 
 
@@ -1014,5 +1112,15 @@ CREATE TABLE IF NOT EXISTS pinecone_vectors (
 
 CREATE INDEX idx_pinecone_vectors_source ON pinecone_vectors(source_type, source_id);
 CREATE INDEX idx_pinecone_vectors_status ON pinecone_vectors(status);
+
+alter table public.pinecone_vectors enable row level security;
+-- 모든 사용자가 SELECT 가능
+create policy "pinecone_vectors are visible to everyone" on pinecone_vectors for select to authenticated, anon using (TRUE);
+-- 모든 사용자가 INSERT 가능
+create policy "Everyone can insert pinecone_vectors" on pinecone_vectors for insert to authenticated with check (TRUE);
+-- 모든 사용자가 UPDATE 가능
+create policy "Everyone can update pinecone_vectors" on pinecone_vectors for update to authenticated using (TRUE);
+-- 모든 사용자가 DELETE 가능
+create policy "Everyone can delete pinecone_vectors" on pinecone_vectors for delete to authenticated using (TRUE);
 
 
