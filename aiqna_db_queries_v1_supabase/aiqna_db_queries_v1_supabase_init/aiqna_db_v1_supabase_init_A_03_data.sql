@@ -269,6 +269,12 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     channel_name VARCHAR(255),
     channel_url TEXT,
     
+    -- Summary From AI 
+    ai_summary TEXT,
+    main_topics TEXT[],
+    key_points TEXT[],
+    keywords TEXT[],
+
     -- 카테고리 및 언어 (snippet)
     category_id VARCHAR(10),
     language VARCHAR(10), -- "ko", "en" 등
@@ -341,7 +347,6 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     thumbnail_height INTEGER,
     upload_date DATE,
     category VARCHAR(100), -- category_id와 별도
-    keywords TEXT[],
     
     -- 불린 플래그들 (기존 호환성)
     is_live BOOLEAN DEFAULT FALSE,
@@ -383,6 +388,7 @@ ON youtube_videos USING gin(relevant_topic_ids);
 
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_keywords_gin 
 ON youtube_videos USING gin(keywords);
+
 
 alter table public.youtube_videos enable row level security;
 -- 모든 사용자가 SELECT 가능
