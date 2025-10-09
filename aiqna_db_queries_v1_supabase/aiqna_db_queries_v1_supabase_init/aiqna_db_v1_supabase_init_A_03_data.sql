@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     index_name VARCHAR(255),
     
     -- 불린 플래그들
+    is_transcript_exist BOOLEAN DEFAULT FALSE,
     is_api_data_fetched BOOLEAN DEFAULT FALSE,
     is_transcript_fetched BOOLEAN DEFAULT FALSE,
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
