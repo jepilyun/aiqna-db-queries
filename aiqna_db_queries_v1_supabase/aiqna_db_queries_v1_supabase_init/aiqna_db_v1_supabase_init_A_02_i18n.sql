@@ -17,7 +17,7 @@
 create table public.languages (
     lang_code character varying(8) not null,
     lang_name character varying(48) not null,
-    "native" character varying(48) not null,
+    native_name character varying(48) not null,
     user_count integer not null default 0,
     constraint languages_pkey primary key (lang_code),
     constraint languages_user_count_check check ((user_count >= 0))
@@ -115,7 +115,7 @@ $$;
 create table public.countries (
     country_code character varying(2) not null,
     country_name character varying(100) not null,
-    "native" character varying(100) not null,
+    native_name character varying(100) not null,
     video_count integer not null default 0,
     constraint countries_pkey primary key (country_code),
     constraint countries_video_count_check check ((video_count >= 0))
