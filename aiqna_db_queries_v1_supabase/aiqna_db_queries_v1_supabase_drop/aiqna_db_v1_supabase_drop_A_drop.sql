@@ -126,6 +126,8 @@ DROP TABLE IF EXISTS public.map_contents CASCADE;
 -- =============================================================================================
 -- 9. CONTENTS
 -- =============================================================================================
+DROP TRIGGER IF EXISTS trigger_update_contents_i18n_updated_at ON public.contents_i18n;
+DROP TABLE IF EXISTS public.contents_i18n CASCADE;
 DROP TRIGGER IF EXISTS trigger_update_contents_updated_at ON public.contents;
 DROP TABLE IF EXISTS public.contents CASCADE;
 

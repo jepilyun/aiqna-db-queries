@@ -569,7 +569,7 @@ $$;
 
 /*
  ***********************************************************************************************
- * TABLE: youtube_video_transcripts
+ * TABLE: youtube_video_transcripts (개선 버전)
  ***********************************************************************************************
  */
 CREATE TABLE IF NOT EXISTS youtube_video_transcripts (
@@ -577,15 +577,13 @@ CREATE TABLE IF NOT EXISTS youtube_video_transcripts (
     video_id VARCHAR(20) NOT NULL,
     
     -- 트랜스크립트 메타 정보
-    "language" VARCHAR(10) NOT NULL DEFAULT 'ko',
+    language VARCHAR(10) NOT NULL DEFAULT 'ko',
     total_duration NUMERIC(12,2),
     segment_count INTEGER DEFAULT 0,
     
-    -- 전체 트랜스크립트 JSON 데이터
-    segments_json JSONB NOT NULL DEFAULT '[]'::JSONB,
-    
-    -- 전체 텍스트 (검색용)
-    full_text TEXT,
+    -- Storage 파일 정보
+    segments_storage_path TEXT,  -- "transcripts/raw/{video_id}_{language}.json"
+    segments_file_size BIGINT,
     
     -- 시스템 정보
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -606,22 +604,23 @@ CREATE TABLE IF NOT EXISTS youtube_video_transcripts (
 -- 인덱스
 CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_video_id 
     ON youtube_video_transcripts(video_id);
+
 CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_language 
     ON youtube_video_transcripts(language);
 
--- 트랜스크립트 전체 텍스트 검색
-CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_full_text_gin 
-    ON youtube_video_transcripts USING gin(to_tsvector('simple', COALESCE(full_text, '')));
+CREATE INDEX IF NOT EXISTS idx_youtube_transcripts_video_language 
+    ON youtube_video_transcripts(video_id, language);
 
+-- RLS 설정
 ALTER TABLE public.youtube_video_transcripts ENABLE ROW LEVEL SECURITY;
 
--- 읽기 전용
+-- 읽기 전용 (모든 사용자)
 CREATE POLICY "youtube_video_transcripts are visible to everyone" 
     ON youtube_video_transcripts FOR SELECT 
     TO authenticated, anon 
     USING (TRUE);
 
--- 관리 작업
+-- 관리 작업 (service_role만)
 CREATE POLICY "Service role can manage youtube_video_transcripts" 
     ON youtube_video_transcripts FOR ALL 
     TO service_role 
@@ -633,7 +632,6 @@ CREATE TRIGGER trigger_update_youtube_video_transcripts_updated_at
     BEFORE UPDATE ON youtube_video_transcripts
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
 
 
 
@@ -684,3 +682,4 @@ CREATE TRIGGER trigger_update_youtube_video_transcript_status
     AFTER INSERT OR DELETE ON youtube_video_transcripts
     FOR EACH ROW 
     EXECUTE FUNCTION update_youtube_video_transcript_status();
+
