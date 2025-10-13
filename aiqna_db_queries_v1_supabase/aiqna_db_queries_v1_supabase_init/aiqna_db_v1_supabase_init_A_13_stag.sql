@@ -30,6 +30,26 @@ CREATE TABLE public.stags (
   instagram_id        VARCHAR(48)   NULL,
   tiktok_id           VARCHAR(48)   NULL,
 
+  -- 위도/경도
+  latitude  NUMERIC(10, 8) NULL,
+  longitude NUMERIC(11, 8) NULL,
+
+  -- 자동 생성되는 지리 객체 컬럼
+  location GEOGRAPHY(POINT, 4326)
+    GENERATED ALWAYS AS (
+      CASE 
+        WHEN latitude IS NOT NULL AND longitude IS NOT NULL 
+        THEN geography(ST_SetSRID(ST_MakePoint(longitude, latitude), 4326))
+        ELSE NULL
+      END
+    ) STORED,
+
+  radius_m       INTEGER       NULL,
+
+  address_en        VARCHAR(255)  NULL,
+  address_native    VARCHAR(255)  NULL,
+  google_map_url    VARCHAR(255)  NULL,
+
   -- 시스템 정보
   created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   created_by          VARCHAR(511)  NULL,

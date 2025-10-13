@@ -236,7 +236,7 @@ AS $$
             ARRAY[c.category_code::text]::text[] AS path
         FROM public.categories c
         WHERE (p_root_category_code IS NULL AND c.upper_category_code IS NULL)
-           OR (c.category_code = p_root_category_code)
+          OR (c.category_code = p_root_category_code)
         
         UNION ALL
         

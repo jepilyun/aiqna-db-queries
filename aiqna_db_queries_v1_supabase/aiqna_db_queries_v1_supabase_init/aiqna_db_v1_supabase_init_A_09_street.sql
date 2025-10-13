@@ -24,7 +24,8 @@ CREATE TABLE public.streets (
   url_en         VARCHAR(511)  NULL,
   url_native     VARCHAR(511)  NULL,
   description_en VARCHAR(1023) NULL,
-  description_ko VARCHAR(1023) NULL,
+  description_native VARCHAR(1023) NULL,
+  google_place_id VARCHAR(63) NULL,
   youtube_ch_id  VARCHAR(48)   NULL,
   instagram_id   VARCHAR(48)   NULL,
 
