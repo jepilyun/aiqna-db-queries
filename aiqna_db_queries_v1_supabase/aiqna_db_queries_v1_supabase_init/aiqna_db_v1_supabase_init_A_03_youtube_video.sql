@@ -28,6 +28,10 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     is_transcript_fetched BOOLEAN DEFAULT FALSE,
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
 
+    -- ERROR
+    is_error_occurred BOOLEAN DEFAULT FALSE,
+    error_message TEXT,
+
     -- 일시 정보
     processing_started TIMESTAMP WITH TIME ZONE,
     processing_completed TIMESTAMP WITH TIME ZONE,
@@ -58,6 +62,10 @@ CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_logs_status
 CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_logs_priority 
     ON youtube_video_processing_logs(priority) 
     WHERE processing_status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_youtube_video_processing_err_flag
+    ON youtube_video_processing_logs(is_error_occurred)
+    WHERE is_error_occurred = TRUE;
 
 ALTER TABLE public.youtube_video_processing_logs ENABLE ROW LEVEL SECURITY;
 

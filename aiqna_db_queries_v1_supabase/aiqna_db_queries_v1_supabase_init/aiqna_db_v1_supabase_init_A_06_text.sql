@@ -19,11 +19,14 @@ CREATE TABLE IF NOT EXISTS text_processing_logs (
     
     -- 메타데이터
     processing_status VARCHAR(20) DEFAULT 'pending',
-    error_message TEXT,
     index_name VARCHAR(255),
 
     -- 불린 플래그들
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
+
+    -- ERROR
+    is_error_occurred BOOLEAN DEFAULT FALSE,
+    error_message TEXT,
     
     -- 일시 정보
     processing_started TIMESTAMP WITH TIME ZONE,
@@ -61,6 +64,10 @@ CREATE INDEX IF NOT EXISTS idx_text_processing_logs_status
 CREATE INDEX IF NOT EXISTS idx_text_processing_logs_priority 
     ON text_processing_logs(priority) 
     WHERE processing_status = 'pending';
+
+CREATE INDEX IF NOT EXISTS idx_text_processing_logs_error_flag
+    ON text_processing_logs(is_error_occurred)
+    WHERE is_error_occurred = TRUE;
 
 ALTER TABLE public.text_processing_logs ENABLE ROW LEVEL SECURITY;
 
