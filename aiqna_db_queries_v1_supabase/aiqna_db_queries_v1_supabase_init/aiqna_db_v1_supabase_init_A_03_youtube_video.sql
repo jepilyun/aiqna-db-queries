@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     index_name VARCHAR(255),
     
     -- 불린 플래그들
-    is_transcript_exist BOOLEAN DEFAULT FALSE,
+    is_shorts BOOLEAN DEFAULT FALSE,
+    is_transcript_exist BOOLEAN DEFAULT NULL,
     is_api_data_fetched BOOLEAN DEFAULT FALSE,
     is_transcript_fetched BOOLEAN DEFAULT FALSE,
     is_pinecone_processed BOOLEAN DEFAULT FALSE,
@@ -102,6 +103,9 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     title TEXT NOT NULL,
     description TEXT,
     published_date TIMESTAMP WITH TIME ZONE,
+
+    -- Shorts 정보
+    is_shorts BOOLEAN DEFAULT FALSE,
     
     -- 채널 정보 (snippet)
     channel_id VARCHAR(50),
@@ -318,8 +322,14 @@ $$;
  * FUNCTION: YouTube Data API 데이터 Upsert
  ***********************************************************************************************
  */
+/*
+ ***********************************************************************************************
+ * FUNCTION: YouTube Data API 데이터 Upsert (+ is_shorts 지원)
+ ***********************************************************************************************
+ */
 CREATE OR REPLACE FUNCTION upsert_youtube_video_api_data(
-    p_video_data JSONB
+    p_video_data JSONB,
+    p_is_shorts BOOLEAN
 )
 RETURNS VARCHAR(20)
 LANGUAGE plpgsql
@@ -404,6 +414,8 @@ BEGIN
         is_live,
         is_upcoming,
         is_private,
+        -- ▼ 추가: is_shorts
+        is_shorts,
         updated_at,
         last_processed_at
     ) VALUES (
@@ -475,6 +487,8 @@ BEGIN
         (v_snippet->>'liveBroadcastContent' = 'live'),
         (v_snippet->>'liveBroadcastContent' = 'upcoming'),
         (v_status->>'privacyStatus' = 'private'),
+        -- ▼ 추가: is_shorts 값
+        COALESCE(p_is_shorts, FALSE),
         NOW(),
         NOW()
     )
@@ -534,24 +548,30 @@ BEGIN
         is_live = EXCLUDED.is_live,
         is_upcoming = EXCLUDED.is_upcoming,
         is_private = EXCLUDED.is_private,
+        -- ▼ 추가: UPSERT 시 NULL이면 기존값 유지
+        is_shorts = COALESCE(p_is_shorts, youtube_videos.is_shorts),
         updated_at = NOW(),
         last_processed_at = NOW();
 
-    -- 처리 로그도 업데이트
+    -- 처리 로그도 업데이트 (is_shorts 포함)
     INSERT INTO youtube_video_processing_logs (
         video_id,
         processing_status,
         is_api_data_fetched,
+        is_shorts,
         updated_at
     )
     VALUES (
         v_video_id,
         'completed',
         TRUE,
+        COALESCE(p_is_shorts, FALSE),
         NOW()
     )
     ON CONFLICT (video_id) DO UPDATE SET
         is_api_data_fetched = TRUE,
+        -- NULL이 들어오면 기존 로그값 유지
+        is_shorts = COALESCE(p_is_shorts, youtube_video_processing_logs.is_shorts),
         processing_status = CASE 
             WHEN youtube_video_processing_logs.processing_status = 'failed' THEN 'completed'
             ELSE youtube_video_processing_logs.processing_status

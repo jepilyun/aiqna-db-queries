@@ -269,7 +269,7 @@ DROP FUNCTION IF EXISTS public.update_youtube_video_transcript_status() CASCADE;
 DROP TRIGGER IF EXISTS trigger_update_youtube_video_transcript_status ON public.youtube_video_transcripts;
 DROP TRIGGER IF EXISTS trigger_update_youtube_video_transcripts_updated_at ON public.youtube_video_transcripts;
 DROP TABLE IF EXISTS public.youtube_video_transcripts CASCADE;
-DROP FUNCTION IF EXISTS public.upsert_youtube_video_api_data(JSONB) CASCADE;
+DROP FUNCTION IF EXISTS public.upsert_youtube_video_api_data(JSONB, BOOLEAN) CASCADE;
 DROP FUNCTION IF EXISTS public.iso8601_duration_to_seconds(TEXT) CASCADE;
 DROP TRIGGER IF EXISTS trigger_update_youtube_videos_updated_at ON public.youtube_videos;
 DROP TABLE IF EXISTS public.youtube_videos CASCADE;
