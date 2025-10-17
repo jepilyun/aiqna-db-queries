@@ -113,10 +113,20 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     channel_url TEXT,
     
     -- Summary From AI 
-    ai_summary TEXT,
-    main_topics TEXT[],
-    key_points TEXT[],
-    keywords TEXT[],
+    info_country TEXT[],
+    info_city TEXT[],
+    info_district TEXT[],
+    info_neighborhood TEXT[],
+    info_landmark TEXT[],
+    info_category TEXT[],
+    info_name TEXT[],
+    info_special_tag TEXT[],
+    info_influencer TEXT[],
+    info_season TEXT[],
+    info_time_of_day TEXT[],
+    info_activity_type TEXT[],
+    info_reservation_required BOOLEAN,
+    info_travel_tips TEXT[],
 
     -- 카테고리 및 언어 (snippet)
     category_id VARCHAR(10),
