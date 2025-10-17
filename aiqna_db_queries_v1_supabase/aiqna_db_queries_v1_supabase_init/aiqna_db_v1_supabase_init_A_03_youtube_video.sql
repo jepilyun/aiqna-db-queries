@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS youtube_video_processing_logs (
     
     -- 메타데이터
     processing_status VARCHAR(20) DEFAULT 'pending',
-    error_message TEXT,
     index_name VARCHAR(255),
     
     -- 불린 플래그들
