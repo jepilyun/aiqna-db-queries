@@ -98,6 +98,8 @@ CREATE TRIGGER trigger_update_instagram_post_processing_logs_updated_at
  ***********************************************************************************************
  */
 CREATE TABLE IF NOT EXISTS instagram_posts (
+    uuid_36 VARCHAR(36) UNIQUE NOT NULL DEFAULT gen_random_uuid()::text,
+
     -- 기본 키
     instagram_post_url VARCHAR(1023) PRIMARY KEY,
     
@@ -112,6 +114,22 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     og_ios_url VARCHAR(1023),
     og_android_package VARCHAR(1023),
     og_android_url VARCHAR(1023),
+
+    -- Summary From AI 
+    info_country TEXT[],
+    info_city TEXT[],
+    info_district TEXT[],
+    info_neighborhood TEXT[],
+    info_landmark TEXT[],
+    info_category TEXT[],
+    info_name TEXT[],
+    info_special_tag TEXT[],
+    info_influencer TEXT[],
+    info_season TEXT[],
+    info_time_of_day TEXT[],
+    info_activity_type TEXT[],
+    info_reservation_required BOOLEAN,
+    info_travel_tips TEXT[],
 
     -- 통계
     like_count BIGINT DEFAULT 0,

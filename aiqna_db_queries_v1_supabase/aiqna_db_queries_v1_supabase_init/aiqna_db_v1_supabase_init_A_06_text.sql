@@ -52,10 +52,7 @@ CREATE TABLE IF NOT EXISTS text_processing_logs (
         OR processing_completed >= processing_started),
 
     -- 우선순위 검증
-    CONSTRAINT chk_text_priority CHECK (priority BETWEEN 1 AND 10),
-    
-    -- 해시 형식 검증 (16진수 문자열)
-    CONSTRAINT chk_text_hash_format CHECK (hash_key ~ '^[a-f0-9]{32,64}$')
+    CONSTRAINT chk_text_priority CHECK (priority BETWEEN 1 AND 10)
 );
 
 CREATE INDEX IF NOT EXISTS idx_text_processing_logs_status 
@@ -106,6 +103,22 @@ CREATE TABLE IF NOT EXISTS texts (
     title VARCHAR(1023),
     content TEXT NOT NULL,  -- 텍스트 내용은 필수
 
+    -- Summary From AI 
+    info_country TEXT[],
+    info_city TEXT[],
+    info_district TEXT[],
+    info_neighborhood TEXT[],
+    info_landmark TEXT[],
+    info_category TEXT[],
+    info_name TEXT[],
+    info_special_tag TEXT[],
+    info_influencer TEXT[],
+    info_season TEXT[],
+    info_time_of_day TEXT[],
+    info_activity_type TEXT[],
+    info_reservation_required BOOLEAN,
+    info_travel_tips TEXT[],
+
     -- 시스템 타임스탬프
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -117,7 +130,6 @@ CREATE TABLE IF NOT EXISTS texts (
     deleted_at TIMESTAMP WITH TIME ZONE,
     
     -- 제약조건
-    CONSTRAINT chk_text_hash_format CHECK (hash_key ~ '^[a-f0-9]{32,64}$'),
     CONSTRAINT chk_text_content_not_empty CHECK (LENGTH(TRIM(content)) > 0)
 );
 
