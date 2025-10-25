@@ -218,6 +218,38 @@ CREATE TRIGGER trigger_update_stag_i18n_updated_at
 
 
 
+--------------------------------------------------------------------------------
+-- TABLE: map_stag_search_keywords (PK: (stag_code, search_keyword))
+--------------------------------------------------------------------------------
+CREATE TABLE public.map_stag_search_keywords (
+  stag_code VARCHAR(96) NOT NULL,
+  search_keyword VARCHAR(100) NOT NULL,
+  CONSTRAINT map_stag_search_keywords_pkey 
+    PRIMARY KEY (stag_code, search_keyword),
+  CONSTRAINT map_stag_search_keywords_stag_code_fkey 
+    FOREIGN KEY (stag_code) 
+    REFERENCES public.stags (stag_code) 
+    ON UPDATE CASCADE ON DELETE CASCADE
+) TABLESPACE pg_default;
+
+ALTER TABLE public.map_stag_search_keywords ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_mstsq_stag_code
+  ON public.map_stag_search_keywords (stag_code);
+
+CREATE POLICY "map_stag_search_keywords are visible to everyone" 
+  ON public.map_stag_search_keywords FOR SELECT 
+  TO authenticated, anon 
+  USING (TRUE);
+
+CREATE POLICY "Service role can manage map_stag_search_keywords" 
+  ON public.map_stag_search_keywords FOR ALL 
+  TO service_role 
+  USING (TRUE) 
+  WITH CHECK (TRUE);
+
+
+
 
 
 /*

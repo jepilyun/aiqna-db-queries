@@ -258,6 +258,43 @@ CREATE TRIGGER trigger_update_city_i18n_updated_at
 
 
 
+/*
+ ***********************************************************************************************
+ * TABLE: map_city_search_keywords
+ ***********************************************************************************************
+ */
+CREATE TABLE public.map_city_search_keywords (
+    city_code VARCHAR(96) NOT NULL,
+    search_keyword VARCHAR(100) NOT NULL,
+    CONSTRAINT map_city_search_keywords_pkey PRIMARY KEY (city_code, search_keyword),
+    CONSTRAINT map_city_search_keywords_city_code_fkey 
+        FOREIGN KEY (city_code) 
+        REFERENCES public.cities (city_code) 
+        ON UPDATE CASCADE 
+        ON DELETE CASCADE
+) TABLESPACE pg_default;
+
+ALTER TABLE public.map_city_search_keywords ENABLE ROW LEVEL SECURITY;
+
+-- map_city_search_keywords
+CREATE INDEX IF NOT EXISTS idx_mcsq_city_code
+    ON public.map_city_search_keywords (city_code);
+
+-- 모든 사용자가 SELECT 가능
+CREATE POLICY "map_city_search_keywords are visible to everyone" 
+    ON map_city_search_keywords FOR SELECT 
+    TO authenticated, anon 
+    USING (TRUE);
+
+-- 관리 작업은 service_role만 가능
+CREATE POLICY "Service role can manage map_city_search_keywords" 
+    ON map_city_search_keywords FOR ALL 
+    TO service_role 
+    USING (TRUE) 
+    WITH CHECK (TRUE);
+
+
+
 
 
 

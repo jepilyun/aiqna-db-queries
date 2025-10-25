@@ -8,7 +8,6 @@
 
 
 
-
 /*
  ***********************************************************************************************
  * TABLE: categories
@@ -20,8 +19,8 @@ CREATE TABLE public.categories (
   upper_category_code  VARCHAR(96)   NULL,
   
   order_num            SMALLINT      NOT NULL DEFAULT 0,
-  name_en              VARCHAR(63)   NOT NULL,
-  name_ko              VARCHAR(63)   NULL,
+  name_en              VARCHAR(100)   NOT NULL,
+  name_ko              VARCHAR(100)   NULL,
   description_en       VARCHAR(1023) NULL,
   description_ko       VARCHAR(1023) NULL,
   
@@ -182,8 +181,8 @@ CREATE TRIGGER trigger_update_categories_updated_at
 CREATE OR REPLACE FUNCTION public.get_sub_categories(
     p_upper_category_code TEXT,
     p_only_display BOOLEAN DEFAULT FALSE,
-    p_only_active BOOLEAN DEFAULT FALSE,
-    p_limit INTEGER DEFAULT 100
+    p_only_active  BOOLEAN DEFAULT FALSE,
+    p_limit        INTEGER DEFAULT 100
 )
 RETURNS JSONB
 LANGUAGE sql
@@ -192,7 +191,7 @@ SECURITY DEFINER
 SET search_path = pg_catalog, public
 AS $$
     SELECT COALESCE(
-        jsonb_agg(to_jsonb(s.*) ORDER BY s.order_num DESC, s.name_en),
+        jsonb_agg(to_jsonb(s) ORDER BY s.order_num DESC, s.name_en),
         '[]'::jsonb
     )
     FROM (
@@ -200,10 +199,10 @@ AS $$
         FROM public.categories c
         WHERE c.upper_category_code = p_upper_category_code
           AND (NOT p_only_display OR c.is_display = TRUE)
-          AND (NOT p_only_active OR c.is_active = TRUE)
+          AND (NOT p_only_active  OR c.is_active  = TRUE)
         ORDER BY c.order_num DESC, c.name_en
         LIMIT p_limit
-    ) AS s
+    ) AS s;
 $$;
 
 
@@ -333,8 +332,8 @@ $$;
 CREATE TABLE public.category_i18n (
   category_code    VARCHAR(96)  NOT NULL,
   lang_code        VARCHAR(8)   NOT NULL,
-  name_i18n        VARCHAR(63)  NOT NULL,
-  description_i18n VARCHAR(511) NULL,
+  name_i18n        VARCHAR(100)  NOT NULL,
+  description_i18n VARCHAR(1023) NULL,
   
   created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -391,6 +390,37 @@ CREATE TRIGGER trigger_update_category_i18n_updated_at
 
 
 
+
+
+--------------------------------------------------------------------------------
+-- TABLE: map_category_search_keywords (PK: (category_code, search_keyword))
+--------------------------------------------------------------------------------
+CREATE TABLE public.map_category_search_keywords (
+  category_code VARCHAR(96) NOT NULL,
+  search_keyword VARCHAR(100) NOT NULL,
+  CONSTRAINT map_category_search_keywords_pkey 
+    PRIMARY KEY (category_code, search_keyword),
+  CONSTRAINT map_category_search_keywords_category_code_fkey 
+    FOREIGN KEY (category_code) 
+    REFERENCES public.categories (category_code) 
+    ON UPDATE CASCADE ON DELETE CASCADE
+) TABLESPACE pg_default;
+
+ALTER TABLE public.map_category_search_keywords ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS idx_mcsq_category_code
+  ON public.map_category_search_keywords (category_code);
+
+CREATE POLICY "map_category_search_keywords are visible to everyone" 
+  ON public.map_category_search_keywords FOR SELECT 
+  TO authenticated, anon 
+  USING (TRUE);
+
+CREATE POLICY "Service role can manage map_category_search_keywords" 
+  ON public.map_category_search_keywords FOR ALL 
+  TO service_role 
+  USING (TRUE) 
+  WITH CHECK (TRUE);
 
 
 
@@ -554,8 +584,8 @@ CREATE OR REPLACE FUNCTION public.get_categories_for_content(
 )
 RETURNS TABLE (
     category_code VARCHAR(96),
-    name_en VARCHAR(63),
-    name_ko VARCHAR(63),
+    name_en VARCHAR(100),
+    name_ko VARCHAR(100),
     upper_category_code VARCHAR(96),
     confidence_score NUMERIC(3, 2),
     is_verified BOOLEAN

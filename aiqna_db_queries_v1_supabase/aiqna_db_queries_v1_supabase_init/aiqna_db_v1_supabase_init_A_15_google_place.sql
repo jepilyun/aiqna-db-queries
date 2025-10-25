@@ -19,7 +19,7 @@ CREATE TABLE public.google_places (
   -- 지역 연결
   country_code         VARCHAR(2)    NOT NULL DEFAULT 'AA',
   city_code            VARCHAR(96)   NULL,
-  street_code          VARCHAR(96)   NULL,
+  district_code        VARCHAR(96)   NULL,
 
   -- 기본 정보
   display_name         VARCHAR(127)  NOT NULL,
@@ -135,9 +135,9 @@ CREATE TABLE public.google_places (
     REFERENCES public.cities (city_code)
     ON UPDATE CASCADE ON DELETE SET NULL,
 
-  CONSTRAINT google_places_street_code_fkey
-    FOREIGN KEY (street_code)
-    REFERENCES public.streets (street_code)
+  CONSTRAINT google_places_district_code_fkey
+    FOREIGN KEY (district_code)
+    REFERENCES public.districts (district_code)
     ON UPDATE CASCADE ON DELETE SET NULL,
 
   -- 제약조건
@@ -231,9 +231,9 @@ CREATE INDEX IF NOT EXISTS google_places_city_idx
   ON public.google_places (city_code)
   WHERE city_code IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS google_places_street_idx
-  ON public.google_places (street_code)
-  WHERE street_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS google_places_district_idx
+  ON public.google_places (district_code)
+  WHERE district_code IS NOT NULL;
 
 -- 타입별 조회
 CREATE INDEX IF NOT EXISTS google_places_primary_type_idx
@@ -540,7 +540,7 @@ $$;
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 CREATE OR REPLACE FUNCTION public.get_google_places_by_location(
     p_city_code VARCHAR(96) DEFAULT NULL,
-    p_street_code VARCHAR(96) DEFAULT NULL,
+    p_district_code VARCHAR(96) DEFAULT NULL,
     p_primary_type VARCHAR(127) DEFAULT NULL,
     p_min_rating REAL DEFAULT NULL
 )
@@ -570,7 +570,7 @@ AS $$
         gp.longitude
     FROM public.google_places gp
     WHERE (p_city_code IS NULL OR gp.city_code = p_city_code)
-      AND (p_street_code IS NULL OR gp.street_code = p_street_code)
+      AND (p_district_code IS NULL OR gp.district_code = p_district_code)
       AND (p_primary_type IS NULL OR gp.primary_type = p_primary_type)
       AND (p_min_rating IS NULL OR gp.rating >= p_min_rating)
       AND gp.is_active = TRUE

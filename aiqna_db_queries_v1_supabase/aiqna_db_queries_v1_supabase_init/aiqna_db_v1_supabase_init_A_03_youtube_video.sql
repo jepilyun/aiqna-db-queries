@@ -257,12 +257,6 @@ CREATE INDEX IF NOT EXISTS idx_youtube_videos_topic_ids_gin
     ON youtube_videos USING gin(topic_ids);
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_relevant_topic_ids_gin 
     ON youtube_videos USING gin(relevant_topic_ids);
-CREATE INDEX IF NOT EXISTS idx_youtube_videos_keywords_gin 
-    ON youtube_videos USING gin(keywords);
-CREATE INDEX IF NOT EXISTS idx_youtube_videos_main_topics_gin 
-    ON youtube_videos USING gin(main_topics);
-CREATE INDEX IF NOT EXISTS idx_youtube_videos_key_points_gin 
-    ON youtube_videos USING gin(key_points);
 
 -- 전체 텍스트 검색 인덱스
 CREATE INDEX IF NOT EXISTS idx_youtube_videos_title_description_gin 

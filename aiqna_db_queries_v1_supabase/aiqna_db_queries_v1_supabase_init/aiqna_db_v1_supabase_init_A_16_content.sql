@@ -19,7 +19,7 @@ CREATE TABLE public.contents (
   -- 지역 연결
   country_code         VARCHAR(2)    NOT NULL DEFAULT 'AA',
   city_code            VARCHAR(96)   NULL,
-  street_code          VARCHAR(96)   NULL,
+  district_code        VARCHAR(96)   NULL,
 
   -- 기본 정보
   name_en              VARCHAR(127)  NULL,
@@ -120,9 +120,9 @@ CREATE TABLE public.contents (
     REFERENCES public.cities (city_code)
     ON UPDATE CASCADE ON DELETE SET NULL,
 
-  CONSTRAINT contents_street_code_fkey
-    FOREIGN KEY (street_code)
-    REFERENCES public.streets (street_code)
+  CONSTRAINT contents_district_code_fkey
+    FOREIGN KEY (district_code)
+    REFERENCES public.districts (district_code)
     ON UPDATE CASCADE ON DELETE SET NULL,
 
   -- 제약조건
@@ -191,9 +191,9 @@ CREATE INDEX IF NOT EXISTS contents_city_idx
   ON public.contents (city_code)
   WHERE city_code IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS contents_street_idx
-  ON public.contents (street_code)
-  WHERE street_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS contents_district_idx
+  ON public.contents (district_code)
+  WHERE district_code IS NOT NULL;
 
 -- 지오 검색
 CREATE INDEX IF NOT EXISTS contents_location_gist_idx
@@ -583,7 +583,7 @@ $$;
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ 
 CREATE OR REPLACE FUNCTION public.get_contents_by_location(
     p_city_code VARCHAR(96) DEFAULT NULL,
-    p_street_code VARCHAR(96) DEFAULT NULL,
+    p_district_code VARCHAR(96) DEFAULT NULL,
     p_is_free BOOLEAN DEFAULT NULL
 )
 RETURNS TABLE (
@@ -610,7 +610,7 @@ AS $$
         c.is_free_available
     FROM public.contents c
     WHERE (p_city_code IS NULL OR c.city_code = p_city_code)
-      AND (p_street_code IS NULL OR c.street_code = p_street_code)
+      AND (p_district_code IS NULL OR c.district_code = p_district_code)
       AND (p_is_free IS NULL OR c.is_free_available = p_is_free)
       AND c.is_active = TRUE
       AND c.is_display = TRUE
