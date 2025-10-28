@@ -53,9 +53,9 @@ CREATE TABLE IF NOT EXISTS public.blog_post_processing_logs (
     -- 시간 로직 검증
     CONSTRAINT chk_blog_processing_times 
         CHECK (
-          processing_started IS NULL OR 
-          processing_completed IS NULL OR 
-          processing_completed >= processing_started
+            processing_started IS NULL OR 
+            processing_completed IS NULL OR 
+            processing_completed >= processing_started
         ),
 
     -- 우선순위 검증

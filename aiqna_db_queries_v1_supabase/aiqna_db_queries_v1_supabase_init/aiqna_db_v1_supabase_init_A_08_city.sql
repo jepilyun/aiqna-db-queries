@@ -52,7 +52,7 @@ CREATE TABLE public.cities (
   address_native VARCHAR(255) NULL,
   google_map_url VARCHAR(255) NULL,
   naver_map_url VARCHAR(255) NULL,
-  etc VARCHAR(1023) NULL,
+  etc TEXT NULL,
   
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   created_by VARCHAR(511) NULL,
