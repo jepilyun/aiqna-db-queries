@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
     info_time_of_day TEXT[],
     info_activity_type TEXT[],
     info_reservation_required BOOLEAN,
-    info_travel_tips TEXT[],
+    info_travel_tips JSONB DEFAULT NULL,
 
     -- 통계
     like_count BIGINT DEFAULT 0,

@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     info_time_of_day TEXT[],
     info_activity_type TEXT[],
     info_reservation_required BOOLEAN,
-    info_travel_tips TEXT[],
+    info_travel_tips JSONB DEFAULT NULL,
 
     -- 카테고리 및 언어 (snippet)
     category_id VARCHAR(10),
