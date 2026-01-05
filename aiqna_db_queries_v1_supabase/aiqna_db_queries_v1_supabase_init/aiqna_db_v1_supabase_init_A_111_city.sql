@@ -8,7 +8,6 @@
 
 
 
-
 /*
  ***********************************************************************************************
  * TABLE: cities (개선된 버전)
@@ -258,37 +257,62 @@ CREATE TRIGGER trigger_update_city_i18n_updated_at
 
 
 
-/*
- ***********************************************************************************************
- * TABLE: map_city_search_keywords
- ***********************************************************************************************
- */
+-- ============================================================================
+-- TABLE: map_city_search_keywords
+-- ============================================================================
+-- 설명: 도시별 검색 키워드 매핑 (내부 검색용)
+-- 용도: "Seoul", "서울", "서울시" → "KR-11" 매핑
+-- 접근: authenticated, anon 모두 조회 가능, service_role만 관리 가능
+-- ============================================================================
 CREATE TABLE public.map_city_search_keywords (
     city_code VARCHAR(96) NOT NULL,
     search_keyword VARCHAR(100) NOT NULL,
-    CONSTRAINT map_city_search_keywords_pkey PRIMARY KEY (city_code, search_keyword),
+    
+    -- 추가 필드
+    lang_code VARCHAR(12) NULL,                    -- 키워드 언어 (ko, en, zh 등)
+    keyword_type VARCHAR(20) NOT NULL DEFAULT 'name',  -- 키워드 유형
+    is_primary BOOLEAN NOT NULL DEFAULT false,     -- 대표 키워드 여부 (검색 결과 표시용)
+    priority SMALLINT NOT NULL DEFAULT 0,          -- 우선순위 (높을수록 먼저 매칭)
+    
+    -- 메타 필드
+    added_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    added_by VARCHAR(45) NULL,
+    
+    CONSTRAINT map_city_search_keywords_pkey 
+        PRIMARY KEY (city_code, search_keyword),
     CONSTRAINT map_city_search_keywords_city_code_fkey 
         FOREIGN KEY (city_code) 
         REFERENCES public.cities (city_code) 
         ON UPDATE CASCADE 
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+    CONSTRAINT map_city_search_keywords_type_check 
+        CHECK (keyword_type IN ('name', 'native', 'alias', 'code', 'abbreviation', 'district', 'old_name')),
+    CONSTRAINT map_city_search_keywords_priority_check
+        CHECK (priority >= 0)
 ) TABLESPACE pg_default;
 
 ALTER TABLE public.map_city_search_keywords ENABLE ROW LEVEL SECURITY;
 
--- map_city_search_keywords
+-- 인덱스
 CREATE INDEX IF NOT EXISTS idx_mcsq_city_code
     ON public.map_city_search_keywords (city_code);
+CREATE INDEX IF NOT EXISTS idx_mcsq_search_keyword
+    ON public.map_city_search_keywords (search_keyword);
+CREATE INDEX IF NOT EXISTS idx_mcsq_search_keyword_lower
+    ON public.map_city_search_keywords (LOWER(search_keyword));  -- 대소문자 무시 검색용
+CREATE INDEX IF NOT EXISTS idx_mcsq_lang_code
+    ON public.map_city_search_keywords (lang_code) WHERE lang_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_mcsq_is_primary
+    ON public.map_city_search_keywords (is_primary) WHERE is_primary = true;
 
--- 모든 사용자가 SELECT 가능
+-- RLS 정책
 CREATE POLICY "map_city_search_keywords are visible to everyone" 
-    ON map_city_search_keywords FOR SELECT 
+    ON public.map_city_search_keywords FOR SELECT 
     TO authenticated, anon 
     USING (TRUE);
 
--- 관리 작업은 service_role만 가능
 CREATE POLICY "Service role can manage map_city_search_keywords" 
-    ON map_city_search_keywords FOR ALL 
+    ON public.map_city_search_keywords FOR ALL 
     TO service_role 
     USING (TRUE) 
     WITH CHECK (TRUE);
@@ -298,109 +322,230 @@ CREATE POLICY "Service role can manage map_city_search_keywords"
 
 
 
-/*
- ***********************************************************************************************
- * TABLE: map_city
- *  - AI로 추출된 도시 정보와 콘텐츠 매핑
- *  - 수동 정렬(order_num) 및 등록시각(added_at) 포함
- ***********************************************************************************************
- */
-CREATE TABLE public.map_city (
-  city_code VARCHAR(96) NOT NULL,
-  source_type VARCHAR(50) NOT NULL,
-  source_id VARCHAR(1023) NOT NULL,
+-- ============================================================================
+-- TABLE: map_city
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.map_city (
+    -- ========================================
+    -- 기본 키
+    -- ========================================
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    
+    -- ========================================
+    -- 매핑 정보
+    -- ========================================
+    city_code VARCHAR(96) NOT NULL,
+    source_type VARCHAR(50) NOT NULL,
+    
+    -- 타입별 ID (source_type에 따라 하나만 NOT NULL)
+    youtube_video_id VARCHAR(20) NULL,
+    instagram_post_id VARCHAR(50) NULL,
+    blog_post_id BIGINT NULL,
+    text_content_id BIGINT NULL,
+    
+    -- ========================================
+    -- AI 추출 정보
+    -- ========================================
+    confidence_score NUMERIC(3,2) NULL,
+    extraction_method VARCHAR(50) NULL,
+    extracted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    -- ========================================
+    -- 검증 정보
+    -- ========================================
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    verified_at TIMESTAMPTZ NULL,
+    verified_by VARCHAR(255) NULL,
+    
+    -- ========================================
+    -- 표시 순서
+    -- ========================================
+    is_selected BOOLEAN NOT NULL DEFAULT FALSE,
+    order_num INTEGER NOT NULL DEFAULT 0,
+    
+    -- ========================================
+    -- 시스템 타임스탬프
+    -- ========================================
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- AI 추출 정보
-  confidence_score NUMERIC(3, 2) NULL,  -- 0.00 ~ 1.00
-  extracted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  extraction_method VARCHAR(50) NULL,  -- 'gpt-4', 'claude', 'manual' 등
-  
-  -- 관리 정보
-  is_verified BOOLEAN NOT NULL DEFAULT FALSE,  -- 수동 검증 여부
-  verified_at TIMESTAMP WITH TIME ZONE NULL,
-  verified_by VARCHAR(511) NULL,
-  
-  is_selected BOOLEAN NOT NULL DEFAULT FALSE,
-  order_num INTEGER NOT NULL DEFAULT 0,
-  added_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-
-  CONSTRAINT map_city_pkey
-    PRIMARY KEY (city_code, source_type, source_id),
-
-  CONSTRAINT map_city_city_code_fkey
-    FOREIGN KEY (city_code) 
-    REFERENCES public.cities (city_code)
-    ON UPDATE CASCADE ON DELETE CASCADE,
-
-  CONSTRAINT map_city_source_type_check 
-    CHECK (source_type IN ('youtube_video', 'instagram_post', 'blog_post', 'text')),
-  
-  CONSTRAINT map_city_order_num_check CHECK (order_num >= 0),
-  
-  CONSTRAINT map_city_confidence_check 
-    CHECK (confidence_score IS NULL OR (confidence_score BETWEEN 0 AND 1))
+    -- ========================================
+    -- 제약조건
+    -- ========================================
+    CONSTRAINT mc_city_code_fkey
+        FOREIGN KEY (city_code) 
+        REFERENCES public.cities (city_code)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    CONSTRAINT mc_youtube_video_id_fkey
+        FOREIGN KEY (youtube_video_id) 
+        REFERENCES public.youtube_video (video_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    CONSTRAINT mc_instagram_post_id_fkey
+        FOREIGN KEY (instagram_post_id) 
+        REFERENCES public.instagram_post (post_id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    CONSTRAINT mc_blog_post_id_fkey
+        FOREIGN KEY (blog_post_id) 
+        REFERENCES public.blog_post (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    CONSTRAINT mc_text_content_id_fkey
+        FOREIGN KEY (text_content_id) 
+        REFERENCES public.text_content (id)
+        ON UPDATE CASCADE ON DELETE CASCADE,
+    
+    CONSTRAINT mc_source_type_check 
+        CHECK (source_type IN ('youtube_video', 'instagram_post', 'blog_post', 'text_content')),
+    
+    CONSTRAINT mc_one_source_id_check 
+        CHECK (
+            (source_type = 'youtube_video' 
+            AND youtube_video_id IS NOT NULL 
+            AND instagram_post_id IS NULL 
+            AND blog_post_id IS NULL 
+            AND text_content_id IS NULL)
+            OR
+            (source_type = 'instagram_post' 
+            AND instagram_post_id IS NOT NULL 
+            AND youtube_video_id IS NULL 
+            AND blog_post_id IS NULL 
+            AND text_content_id IS NULL)
+            OR
+            (source_type = 'blog_post' 
+            AND blog_post_id IS NOT NULL 
+            AND youtube_video_id IS NULL 
+            AND instagram_post_id IS NULL 
+            AND text_content_id IS NULL)
+            OR
+            (source_type = 'text_content' 
+            AND text_content_id IS NOT NULL 
+            AND youtube_video_id IS NULL 
+            AND instagram_post_id IS NULL 
+            AND blog_post_id IS NULL)
+        ),
+    
+    CONSTRAINT mc_mapping_unique 
+        UNIQUE (city_code, source_type, 
+                COALESCE(youtube_video_id, 
+                        instagram_post_id, 
+                        blog_post_id::TEXT, 
+                        text_content_id::TEXT)),
+    
+    CONSTRAINT mc_order_num_check 
+        CHECK (order_num >= 0),
+    
+    CONSTRAINT mc_confidence_check 
+        CHECK (confidence_score IS NULL OR (confidence_score >= 0 AND confidence_score <= 1)),
+    
+    CONSTRAINT mc_verified_logic_check
+        CHECK (
+            (is_verified = FALSE AND verified_at IS NULL AND verified_by IS NULL)
+            OR
+            (is_verified = TRUE AND verified_at IS NOT NULL)
+        )
 ) TABLESPACE pg_default;
 
--- =============================================================================================
--- Indexes
--- =============================================================================================
+-- ========================================
+-- 인덱스: map_city
+-- ========================================
+-- 기본 매핑 인덱스
+CREATE INDEX IF NOT EXISTS idx_mc_city_order 
+    ON public.map_city (city_code, order_num);
 
--- 도시별 콘텐츠 목록 조회 (순서 정렬)
-CREATE INDEX IF NOT EXISTS map_city_code_order_idx
-  ON public.map_city (city_code, order_num, source_id);
+CREATE INDEX IF NOT EXISTS idx_mc_city_added 
+    ON public.map_city (city_code, created_at DESC);
 
--- 최신 등록순 조회
-CREATE INDEX IF NOT EXISTS map_city_code_added_idx
-  ON public.map_city (city_code, added_at DESC, source_id);
+CREATE INDEX IF NOT EXISTS idx_mc_selected 
+    ON public.map_city (city_code, order_num) 
+    WHERE is_selected = TRUE;
 
--- 선택된 항목 빠른 조회
-CREATE INDEX IF NOT EXISTS map_city_selected_idx
-  ON public.map_city (city_code, order_num, added_at DESC)
-  WHERE is_selected = TRUE;
+CREATE INDEX IF NOT EXISTS idx_mc_verified 
+    ON public.map_city (city_code, confidence_score DESC) 
+    WHERE is_verified = TRUE;
 
--- 검증된 항목 조회
-CREATE INDEX IF NOT EXISTS map_city_verified_idx
-  ON public.map_city (city_code, confidence_score DESC)
-  WHERE is_verified = TRUE;
+-- 소스별 역방향 인덱스
+CREATE INDEX IF NOT EXISTS idx_mc_youtube_video 
+    ON public.map_city (youtube_video_id, city_code) 
+    WHERE youtube_video_id IS NOT NULL;
 
--- 역방향 탐색 (특정 콘텐츠가 매핑된 도시들)
-CREATE INDEX IF NOT EXISTS map_city_source_idx
-  ON public.map_city (source_type, source_id, city_code);
+CREATE INDEX IF NOT EXISTS idx_mc_instagram_post 
+    ON public.map_city (instagram_post_id, city_code) 
+    WHERE instagram_post_id IS NOT NULL;
 
--- 소스 타입별 조회
-CREATE INDEX IF NOT EXISTS map_city_source_type_idx
-  ON public.map_city (source_type, added_at DESC);
+CREATE INDEX IF NOT EXISTS idx_mc_blog_post 
+    ON public.map_city (blog_post_id, city_code) 
+    WHERE blog_post_id IS NOT NULL;
 
--- 신뢰도 높은 항목 조회
-CREATE INDEX IF NOT EXISTS map_city_confidence_idx
-  ON public.map_city (confidence_score DESC)
-  WHERE confidence_score >= 0.8;
+CREATE INDEX IF NOT EXISTS idx_mc_text_content 
+    ON public.map_city (text_content_id, city_code) 
+    WHERE text_content_id IS NOT NULL;
 
--- =============================================================================================
--- RLS
--- =============================================================================================
+-- 소스 타입별 인덱스
+CREATE INDEX IF NOT EXISTS idx_mc_source_type 
+    ON public.map_city (source_type, created_at DESC);
 
+-- 신뢰도 인덱스
+CREATE INDEX IF NOT EXISTS idx_mc_high_confidence 
+    ON public.map_city (city_code, confidence_score DESC) 
+    WHERE confidence_score >= 0.8;
+
+CREATE INDEX IF NOT EXISTS idx_mc_low_confidence 
+    ON public.map_city (city_code, confidence_score ASC) 
+    WHERE confidence_score < 0.7 AND is_verified = FALSE;
+
+-- 검증자별 조회
+CREATE INDEX IF NOT EXISTS idx_mc_verified_by 
+    ON public.map_city (verified_by, verified_at DESC) 
+    WHERE verified_by IS NOT NULL;
+
+-- 추출 방법별 통계/분석용
+CREATE INDEX IF NOT EXISTS idx_mc_extraction_method 
+    ON public.map_city (extraction_method, extracted_at DESC) 
+    WHERE extraction_method IS NOT NULL;
+
+-- 최근 추출 인덱스
+CREATE INDEX IF NOT EXISTS idx_mc_recently_extracted 
+    ON public.map_city (extracted_at DESC) 
+    WHERE extracted_at > NOW() - INTERVAL '7 days';
+
+-- ========================================
+-- RLS: map_city
+-- ========================================
 ALTER TABLE public.map_city ENABLE ROW LEVEL SECURITY;
 
--- 읽기 전용
-CREATE POLICY "map_city are visible to everyone"
-  ON public.map_city FOR SELECT 
-  TO authenticated, anon 
-  USING (TRUE);
+CREATE POLICY "map_city is visible to everyone"
+    ON public.map_city FOR SELECT 
+    TO authenticated, anon 
+    USING (TRUE);
 
--- 관리 작업
 CREATE POLICY "Service role can manage map_city"
-  ON public.map_city FOR ALL 
-  TO service_role 
-  USING (TRUE) 
-  WITH CHECK (TRUE);
+    ON public.map_city FOR ALL 
+    TO service_role 
+    USING (TRUE) 
+    WITH CHECK (TRUE);
 
--- 트리거
-CREATE TRIGGER trigger_update_map_city_updated_at
-  BEFORE UPDATE ON public.map_city
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- ========================================
+-- 트리거: map_city updated_at
+-- ========================================
+CREATE OR REPLACE FUNCTION public.update_map_city_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trigger_mc_updated_at
+    BEFORE UPDATE ON public.map_city
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_map_city_updated_at();
+
+
 
 
 

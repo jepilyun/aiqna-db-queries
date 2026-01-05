@@ -414,40 +414,25 @@ DROP FUNCTION IF EXISTS public.upsert_youtube_video_api_data(JSONB, BOOLEAN) CAS
 DROP FUNCTION IF EXISTS public.iso8601_duration_to_seconds(TEXT) CASCADE;
 DROP TRIGGER IF EXISTS trigger_update_youtube_videos_updated_at ON public.youtube_videos;
 DROP TABLE IF EXISTS public.youtube_videos CASCADE;
+DROP TRIGGER IF EXISTS trigger_update_youtube_video_processing_logs_updated_at ON public.youtube_video_processing_logs;
+DROP TABLE IF EXISTS public.youtube_video_processing_logs CASCADE;
 
-
-
-
-
-
-
-
-
-
-
-
-DROP TRIGGER IF EXISTS update_plyv_updated_at ON public.processing_log_youtube_video;
-DROP TABLE IF EXISTS public.processing_log_youtube_video CASCADE;
 
 -- =============================================================================================
 -- 27. COUNTRIES & LANGUAGES
 -- =============================================================================================
 
--- Map Country Language 관련
-DROP TABLE IF EXISTS public.map_country_language CASCADE;
-
--- Country 관련
+DROP FUNCTION IF EXISTS public.change_countries_video_count() CASCADE;
+DROP FUNCTION IF EXISTS public.decrease_countries_video_count() CASCADE;
+DROP FUNCTION IF EXISTS public.increase_countries_video_count() CASCADE;
+DROP TABLE IF EXISTS public.map_country_languages CASCADE;
 DROP TABLE IF EXISTS public.search_map_country_by_keyword CASCADE;
-DROP FUNCTION IF EXISTS public.change_country_user_count() CASCADE;
-DROP FUNCTION IF EXISTS public.decrease_country_user_count() CASCADE;
-DROP FUNCTION IF EXISTS public.increase_country_user_count() CASCADE;
-DROP TABLE IF EXISTS public.country CASCADE;
+DROP TABLE IF EXISTS public.countries CASCADE;
+DROP FUNCTION IF EXISTS public.change_languages_user_count() CASCADE;
+DROP FUNCTION IF EXISTS public.decrease_languages_user_count() CASCADE;
+DROP FUNCTION IF EXISTS public.increase_languages_user_count() CASCADE;
+DROP TABLE IF EXISTS public.languages CASCADE;
 
--- Language 관련
-DROP FUNCTION IF EXISTS public.change_language_user_count() CASCADE;
-DROP FUNCTION IF EXISTS public.decrease_language_user_count() CASCADE;
-DROP FUNCTION IF EXISTS public.increase_language_user_count() CASCADE;
-DROP TABLE IF EXISTS public.language CASCADE;
 
 -- =============================================================================================
 -- 22. COMMON FUNCTIONS
